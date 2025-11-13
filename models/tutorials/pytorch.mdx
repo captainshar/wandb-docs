@@ -5,7 +5,7 @@ import { ColabLink } from '/snippets/en/_includes/colab-link.mdx';
 
 <ColabLink url="https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb" />
 
-This tutorial shows you how to integrate Weights & Biases (W&B) with PyTorch for experiment tracking, gradient monitoring, and model versioning.
+This tutorial shows you how to integrate Weights & Biases (W&B) with PyTorch for experiment tracking, gradient monitoring, and model versioning. Jump to the [quick start](#quick-start) for a minimal code example, or continue reading for a [complete MNIST tutorial](#installation-and-setup).
 
 <Frame>
     <img src="/images/tutorials/huggingface-why.png" alt="Diagram showing W&B benefits: experiment tracking, model versioning, and team collaboration"  />
@@ -55,7 +55,13 @@ wandb.log({"loss": loss_value, "accuracy": acc_value})
 wandb.save("model.pth")
 ```
 
-For a complete working example, see the full MNIST tutorial below or follow along with a [video tutorial](https://wandb.me/pytorch-video).
+**Note**: This example uses placeholder names. Replace with your own values:
+- `"my-project"`: Your W&B project name
+- `model`: Your PyTorch model instance
+- `loss_value`, `acc_value`: Your computed metric values
+- `"model.pth"`: Your model checkpoint filename
+
+For a complete working example, see the [full MNIST tutorial](#installation-and-setup) below or follow along with a [video tutorial](https://wandb.me/pytorch-video).
 
 ## Installation and setup
 
