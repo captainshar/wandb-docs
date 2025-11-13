@@ -5,10 +5,12 @@ import { ColabLink } from '/snippets/en/_includes/colab-link.mdx';
 
 <ColabLink url="https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb" />
 
-This tutorial shows you how to integrate Weights & Biases (W&B) with PyTorch for experiment tracking, gradient monitoring, and model versioning. Jump to the [quick start](#quick-start) for a minimal code example, or continue reading for a [complete MNIST tutorial](#installation-and-setup).
+This tutorial shows you how to integrate Weights & Biases (W&B) with PyTorch for experiment tracking, gradient monitoring, and model versioning. Jump to the [quick start](#quick-start) for a minimal code example, or follow along with the [complete MNIST tutorial](#installation-and-setup).
+
+The W&B dashboard displays real-time training metrics and gradient monitoring, helping you track model performance and diagnose issues during training.
 
 <Frame>
-    <img src="/images/tutorials/huggingface-why.png" alt="Diagram showing W&B benefits: experiment tracking, model versioning, and team collaboration"  />
+    <img src="/images/tutorials/huggingface-why.png" alt="W&B dashboard displaying a training loss curve decreasing from 0.8 to 0.2 over 500 steps, with three gradient monitoring panels below showing stable gradient flow for bias and weight parameters across network layers"  />
 </Frame>
 
 ## What you'll learn
@@ -494,10 +496,8 @@ The sweep runs multiple experiments, testing different hyperparameter combinatio
 
 Learn more in the [Sweeps documentation](/models/sweeps/) or try this [interactive Colab notebook](https://wandb.me/sweeps-colab).
 
-The W&B dashboard displays real-time training metrics and gradient monitoring, helping you track model performance and diagnose issues during training.
-
 <Frame>
-    <img src="/images/tutorials/pytorch-2.png" alt="W&B dashboard displaying a training loss curve decreasing from 0.8 to 0.2 over 500 steps, with three gradient monitoring panels below showing stable gradient flow for bias and weight parameters across network layers"  />
+    <img src="/images/tutorials/pytorch-2.png" alt="W&B dashboard showing sweep results with parallel coordinates plot and performance metrics"  />
 </Frame>
 
 ## Next steps
