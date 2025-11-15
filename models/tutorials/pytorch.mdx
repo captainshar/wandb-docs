@@ -96,18 +96,19 @@ from tqdm.auto import tqdm
 
 # Ensure deterministic behavior
 torch.backends.cudnn.deterministic = True
-random.seed(hash("setting random seeds") % 2**32 - 1)
-np.random.seed(hash("improves reproducibility") % 2**32 - 1)
-torch.manual_seed(hash("by removing stochasticity") % 2**32 - 1)
-torch.cuda.manual_seed_all(hash("so runs are repeatable") % 2**32 - 1)
+random.seed(42)
+np.random.seed(42)
+torch.manual_seed(42)
+torch.cuda.manual_seed_all(42)
 
 # Device configuration
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-# Remove slow mirror from list of MNIST mirrors
-torchvision.datasets.MNIST.mirrors = [mirror for mirror in torchvision.datasets.MNIST.mirrors
-                                      if not mirror.startswith("http://yann.lecun.com")]
 ```
+
+This code sets up the standard PyTorch environment. The key parts:
+- **Random seeds**: Setting random seeds ensures reproducible results, which is important when comparing experiments tracked in W&B
+- **Device configuration**: Determines whether to use GPU or CPU for training
+- **Standard imports**: PyTorch, torchvision for the MNIST dataset, and tqdm for progress bars
 
 ### Log in to W&B
 
@@ -172,10 +173,20 @@ def model_pipeline(hyperparameters):
 
 The `wandb.init()` context manager:
 - Logs all hyperparameters from the `config` dictionary
-- Ensures proper cleanup when training completes
+- Ensures proper cleanup when training completes (automatically calls `wandb.finish()` at the end of the `with` block)
 - Syncs data to W&B servers
 
-Access hyperparameters using `wandb.config` to ensure logged values match the values used during training.
+**Note**: You can also call `wandb.init()` without a context manager (as shown in the quick start), but you'll need to manually call `wandb.finish()` at the end of your script. The context manager pattern is recommended as it handles cleanup automatically.
+
+Use `wandb.config` to access hyperparameters throughout your code. This ensures the values W&B logs are exactly the same values used during training:
+
+```python
+# Good: Use wandb.config
+optimizer = torch.optim.Adam(model.parameters(), lr=wandb.config.learning_rate)
+
+# Avoid: Using original config dictionary
+optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
+```
 
 ## Prepare data and model
 
@@ -226,6 +237,8 @@ def make_loader(dataset, batch_size):
     )
     return loader
 ```
+
+**Note**: This tutorial uses `slice=5` in `get_data()` to load only every 5th example from MNIST, reducing training time for demonstration purposes. In production, use the full dataset by removing the `Subset` wrapper or setting `slice=1`.
 
 ### Define model architecture
 
@@ -301,7 +314,7 @@ Parameters:
 - `model`: Your PyTorch model
 - `criterion`: Loss function (optional)
 - `log`: What to track - `"gradients"`, `"parameters"`, `"all"`, or `None`
-- `log_freq`: How often to log (in batches)
+- `log_freq`: How often to log, in training batches (e.g., `10` means every 10 batches). Lower values provide more detail but increase logging overhead.
 
 ### Log metrics during training
 
@@ -331,7 +344,7 @@ def train(model, loader, criterion, optimizer, config):
             example_ct += len(images)
             batch_ct += 1
 
-            # Log metrics every 25 batches
+            # Log loss and epoch metrics every 25 batches
             if ((batch_ct + 1) % 25) == 0:
                 train_log(loss, example_ct, epoch)
 
@@ -373,7 +386,7 @@ def train_log(loss, example_ct, epoch):
         example_ct: Number of examples processed
         epoch: Current epoch number
     """
-    # Log metrics
+    # Log metrics with example count as x-axis
     wandb.log({"epoch": epoch, "loss": loss}, step=example_ct)
     print(f"Loss after {str(example_ct).zfill(5)} examples: {loss:.3f}")
 ```
@@ -381,7 +394,9 @@ def train_log(loss, example_ct, epoch):
 The `wandb.log()` function accepts a dictionary where:
 - Keys are metric names (displayed in the dashboard)
 - Values are the metric values to log
-- The `step` parameter specifies the x-axis value (optional)
+- The `step` parameter controls the x-axis in charts (here we use total examples seen, which provides a consistent metric across different batch sizes)
+
+**Note**: This tutorial logs metrics every 25 batches (via `wandb.log()`) while gradients/parameters are logged every 10 batches (via `wandb.watch()`). These frequencies can be adjusted based on your needs—more frequent logging provides finer detail but increases overhead.
 
 ## Evaluate and save models
 
@@ -446,6 +461,8 @@ The `wandb.save()` function ensures model files are:
 - Associated with the current run
 - Versioned and retrievable
 
+**ONNX vs PyTorch checkpoints**: ONNX format (.onnx) provides cross-framework compatibility, allowing your model to run in different environments beyond PyTorch. PyTorch checkpoints (.pth) are faster to save and sufficient if you're staying within the PyTorch ecosystem. The example code tries ONNX first, falling back to PyTorch format if ONNX export fails.
+
 For advanced model versioning and distribution, see [W&B Artifacts](/models/artifacts/).
 
 ## Run the training pipeline
@@ -464,19 +481,14 @@ After you run this code, W&B provides links to:
 The run page includes these tabs:
 
 1. **Charts**: Visualizes logged metrics, gradients, and parameters over time
-2. **System**: Displays system metrics including GPU utilization, memory usage, and CPU performance
-3. **Logs**: Shows output from standard out during training
+2. **Overview**: Summary of run configuration, metadata, and hardware information
+3. **Logs**: Shows console output from standard out during training
 4. **Files**: Lists saved files, including `model.onnx` (viewable with the [Netron model viewer](https://github.com/lutzroeder/netron))
+5. **Artifacts**: Tracks versioned datasets and model files (if using W&B Artifacts)
 
-## Optimize hyperparameters with sweeps
+## Conclusion
 
-W&B Sweeps automates hyperparameter optimization. Instead of manually testing different configurations, you can define a search space and let W&B explore it systematically.
-
-Learn more in the [Sweeps documentation](/models/sweeps/) or check out this [interactive Colab notebook](https://wandb.me/sweeps-colab) for a complete hyperparameter optimization tutorial.
-
-<Frame>
-    <img src="/images/tutorials/pytorch-2.png" alt="W&B dashboard showing sweep results with parallel coordinates plot and performance metrics"  />
-</Frame>
+You've successfully integrated Weights & Biases with PyTorch! You now know how to track experiments, monitor training metrics and gradients, save model checkpoints, and visualize results in the W&B dashboard. These capabilities form the foundation for reproducible, collaborative machine learning workflows.
 
 ## Next steps
 
@@ -488,6 +500,16 @@ Now that you've integrated W&B with PyTorch, explore these additional features:
 - [Sweeps](/models/sweeps/): Advanced hyperparameter optimization strategies
 - [Artifacts](/models/artifacts/): Version and track datasets, models, and other files
 
-## Example gallery
+### Optimize hyperparameters with sweeps
+
+W&B Sweeps automates hyperparameter optimization. Instead of manually testing different configurations, you can define a search space and let W&B explore it systematically.
+
+Learn more in the [Sweeps documentation](/models/sweeps/) or check out this [interactive Colab notebook](https://wandb.me/sweeps-colab) for a complete hyperparameter optimization tutorial.
+
+<Frame>
+    <img src="/images/tutorials/pytorch-2.png" alt="W&B dashboard showing sweep results with parallel coordinates plot and performance metrics"  />
+</Frame>
+
+### Example gallery
 
 Explore projects tracked with W&B in the [Gallery](https://app.wandb.ai/gallery).
