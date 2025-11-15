@@ -5,52 +5,83 @@ import { ColabLink } from '/snippets/en/_includes/colab-link.mdx';
 
 <ColabLink url="https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb" />
 
-Use [W&B](https://wandb.ai) for machine learning experiment tracking, dataset versioning, and project collaboration.
+This tutorial shows you how to integrate Weights & Biases (W&B) with PyTorch for experiment tracking, gradient monitoring, and model versioning. You can run this tutorial interactively in Google Colab using the **Try in Colab** button above, or follow along in your own environment.
+
+Jump to the [quick start](#quick-start) for a minimal code example, or continue reading for the [complete MNIST tutorial](#installation-and-setup) (handwritten digit classification).
 
 <Frame>
-    <img src="/images/tutorials/huggingface-why.png" alt="Benefits of using W&B"  />
+    <img src="https://wandb.me/mini-diagram" alt="Weights & Biases features including Experiments, Reports, Artifacts, Tables, Sweeps, and Models"  />
 </Frame>
 
-## What this notebook covers
+## What you'll learn
 
-We show you how to integrate W&B with your PyTorch code to add experiment tracking to your pipeline.
+This tutorial demonstrates how to:
+
+- Track hyperparameters and metrics during training
+- Monitor model gradients and parameters
+- Save and version trained models
+- Visualize results in the W&B dashboard
+
+**Time to complete**: Approximately 15 minutes
+
+The image below shows the Weights & Biases **Runs > [specific run] > Charts** dashboard monitoring a model's training, displaying line charts for test_accuracy, loss, and epoch, and six histogram plots for layer-specific gradients.
 
 <Frame>
-    <img src="/images/tutorials/pytorch.png" alt="PyTorch and W&B integration diagram"  />
+    <img src="/images/tutorials/pytorch-run.png" alt="A screenshot of a Weights & Biases 'Run' dashboard displaying nine charts. The top row shows line charts for 'test_accuracy,' 'loss,' and 'epoch.' The bottom two rows show six histogram plots for model 'gradients' for various layers."  />
 </Frame>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- Python 3.7 or later
+- PyTorch 1.9.0 or later installed ([installation guide](https://pytorch.org/get-started/locally/))
+- A W&B account (sign up free at [wandb.ai](https://wandb.ai))
+- Your W&B API key (find it at [wandb.ai/authorize](https://wandb.ai/authorize) after signing in)
+- Experience training PyTorch models
+- Understanding of machine learning concepts (epochs, hyperparameters, loss functions, and gradients)
+
+## Quick start
+
+For a quick copy-and-paste integration, add W&B to your PyTorch workflow with the `import wandb` statement and these four steps:
 
 ```python
-# import the library
 import wandb
 
-# start a new experiment
-with wandb.init(project="new-sota-model") as run:
- 
-    # capture a dictionary of hyperparameters with config
-    run.config = {"learning_rate": 0.001, "epochs": 100, "batch_size": 128}
+# 1. Initialize tracking
+wandb.init(project="my-project", config={"learning_rate": 0.001, "epochs": 10})
 
-    # set up model and data
-    model, dataloader = get_model(), get_data()
+# 2. Optional: Track model gradients
+wandb.watch(model, log="all", log_freq=10)
 
-    # optional: track gradients
-    run.watch(model)
+# 3. Log metrics in your training loop
+wandb.log({"loss": loss_value, "accuracy": acc_value})
 
-    for batch in dataloader:
-    metrics = model.training_step()
-    # log metrics inside your training loop to visualize model performance
-    run.log(metrics)
-
-    # optional: save model at the end
-    model.to_onnx()
-    run.save("model.onnx")
+# 4. Save your model
+wandb.save("model.pth")
 ```
 
-Follow along with a [video tutorial](https://wandb.me/pytorch-video).
+**Note**: The example above uses placeholder names. Replace with your own values:
+- `"my-project"`: Your W&B project name
+- `model`: Your PyTorch model instance
+- `loss_value`, `acc_value`: Your computed metric values
+- `"model.pth"`: Your model checkpoint filename
 
-**Note**: Sections starting with _Step_ are all you need to integrate W&B in an existing pipeline. The rest just loads data and defines a model.
+For a complete working example, see the [full MNIST tutorial](#installation-and-setup) below or follow along with a [video tutorial](https://wandb.me/pytorch-video).
 
-## Install, import, and log in
+## Installation and setup
 
+The following sections walk through a complete example of training a convolutional neural network on the MNIST dataset (handwritten digit classification) with W&B integration. You can follow along interactively in [Google Colab](https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb) or run the code in your own environment.
+
+### Install W&B
+
+Install the W&B library and ONNX using pip:
+
+```python
+pip install wandb onnx
+```
+
+### Import libraries
 
 ```python
 import os
@@ -65,64 +96,44 @@ from tqdm.auto import tqdm
 
 # Ensure deterministic behavior
 torch.backends.cudnn.deterministic = True
-random.seed(hash("setting random seeds") % 2**32 - 1)
-np.random.seed(hash("improves reproducibility") % 2**32 - 1)
-torch.manual_seed(hash("by removing stochasticity") % 2**32 - 1)
-torch.cuda.manual_seed_all(hash("so runs are repeatable") % 2**32 - 1)
+random.seed(42)
+np.random.seed(42)
+torch.manual_seed(42)
+torch.cuda.manual_seed_all(42)
 
 # Device configuration
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-# remove slow mirror from list of MNIST mirrors
-torchvision.datasets.MNIST.mirrors = [mirror for mirror in torchvision.datasets.MNIST.mirrors
-                                      if not mirror.startswith("http://yann.lecun.com")]
 ```
 
-### Step 0: Install W&B
+This code sets up the standard PyTorch environment. The key parts:
+- **Random seeds**: Setting random seeds ensures reproducible results, which is important when comparing experiments tracked in W&B
+- **Device configuration**: Determines whether to use GPU or CPU for training
+- **Standard imports**: PyTorch, torchvision for the MNIST dataset, and tqdm for progress bars
 
-To get started, we'll need to get the library.
-`wandb` is easily installed using `pip`.
+### Log in to W&B
 
+Authenticate with W&B to enable data logging:
 
 ```python
-!pip install wandb onnx -Uq
-```
-
-### Step 1: Import W&B and Login
-
-In order to log data to our web service,
-you'll need to log in.
-
-If this is your first time using W&B,
-you'll need to sign up for a free account at the link that appears.
-
-
-```
 import wandb
 
 wandb.login()
 ```
 
-## Define the Experiment and Pipeline
+When you run this command, you'll see a prompt asking you to paste your API key:
 
-### Track metadata and hyperparameters with `wandb.init`
+```
+wandb: You can find your API key in your browser here: https://wandb.ai/authorize
+wandb: Paste an API key from your profile and hit enter:
+```
 
-Programmatically, the first thing we do is define our experiment:
-what are the hyperparameters? what metadata is associated with this run?
+Copy your API key from [wandb.ai/authorize](https://wandb.ai/authorize), paste it into the prompt, and press **Enter**. The key will be saved locally for future use.
 
-It's a pretty common workflow to store this information in a `config` dictionary
-(or similar object)
-and then access it as needed.
+## Initialize experiment tracking
 
-For this example, we're only letting a few hyperparameters vary
-and hand-coding the rest.
-But any part of your model can be part of the `config`.
+### Configure hyperparameters
 
-We also include some metadata: we're using the MNIST dataset and a convolutional
-architecture. If we later work with, say,
-fully connected architectures on CIFAR in the same project,
-this will help us separate our runs.
-
+Store your hyperparameters in a configuration dictionary. This enables automatic logging and ensures consistency across your experiment:
 
 ```python
 config = dict(
@@ -135,135 +146,120 @@ config = dict(
     architecture="CNN")
 ```
 
-Now, let's define the overall pipeline,
-which is pretty typical for model-training:
+### Start a W&B run
 
-1. we first `make` a model, plus associated data and optimizer, then
-2. we `train` the model accordingly and finally
-3. `test` it to see how training went.
-
-We'll implement these functions below.
-
+Use `wandb.init()` to start tracking your experiment. This function establishes a connection to W&B servers and logs your configuration:
 
 ```python
 def model_pipeline(hyperparameters):
+    # Initialize W&B run
+    with wandb.init(project="pytorch-demo", config=hyperparameters):
+        # Access hyperparameters through wandb.config
+        config = wandb.config
 
-    # tell wandb to get started
-    with wandb.init(project="pytorch-demo", config=hyperparameters) as run:
-        # access all HPs through run.config, so logging matches execution.
-        config = run.config
-
-        # make the model, data, and optimization problem
+        # Create model, data, and optimizer
         model, train_loader, test_loader, criterion, optimizer = make(config)
         print(model)
 
-        # and use them to train the model
+        # Train the model
         train(model, train_loader, criterion, optimizer, config)
 
-        # and test its final performance
+        # Evaluate the model
         test(model, test_loader)
 
     return model
 ```
 
-The only difference here from a standard pipeline
-is that it all occurs inside the context of `wandb.init`.
-Calling this function sets up a line of communication
-between your code and our servers.
+The `wandb.init()` context manager:
+- Logs all hyperparameters from the `config` dictionary
+- Ensures proper cleanup when training completes (automatically calls `wandb.finish()` at the end of the `with` block)
+- Syncs data to W&B servers
 
-Passing the `config` dictionary to `wandb.init`
-immediately logs all that information to us,
-so you'll always know what hyperparameter values
-you set your experiment to use.
+**Note**: You can also call `wandb.init()` without a context manager (as shown in the quick start), but you'll need to manually call `wandb.finish()` at the end of your script. The context manager pattern is recommended as it handles cleanup automatically.
 
-To ensure the values you chose and logged are always the ones that get used
-in your model, we recommend using the `run.config` copy of your object.
-Check the definition of `make` below to see some examples.
-
-> *Side Note*: We take care to run our code in separate processes,
-so that any issues on our end
-(such as if a giant sea monster attacks our data centers)
-don't crash your code.
-Once the issue is resolved, such as when the Kraken returns to the deep,
-you can log the data with `wandb sync`.
-
+Use `wandb.config` to access hyperparameters throughout your code. This ensures the values W&B logs are exactly the same values used during training:
 
 ```python
-def make(config):
-    # Make the data
-    train, test = get_data(train=True), get_data(train=False)
-    train_loader = make_loader(train, batch_size=config.batch_size)
-    test_loader = make_loader(test, batch_size=config.batch_size)
+# Good: Use wandb.config
+optimizer = torch.optim.Adam(model.parameters(), lr=wandb.config.learning_rate)
 
-    # Make the model
-    model = ConvNet(config.kernels, config.classes).to(device)
-
-    # Make the loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=config.learning_rate)
-    
-    return model, train_loader, test_loader, criterion, optimizer
+# Avoid: Using original config dictionary
+optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
 ```
 
-### Define the Data Loading and Model
+## Prepare data and model
 
-Now, we need to specify how the data is loaded and what the model looks like.
+### Load dataset
 
-This part is very important, but it's
-no different from what it would be without `wandb`,
-so we won't dwell on it.
-
+Define functions to load and prepare your dataset:
 
 ```python
 def get_data(slice=5, train=True):
-    full_dataset = torchvision.datasets.MNIST(root=".",
-                                              train=train, 
-                                              transform=transforms.ToTensor(),
-                                              download=True)
-    #  equiv to slicing with [::slice] 
+    """Load MNIST dataset.
+
+    Args:
+        slice: Use every nth example to reduce dataset size
+        train: If True, load training set; otherwise load test set
+
+    Returns:
+        Subset of MNIST dataset
+    """
+    full_dataset = torchvision.datasets.MNIST(
+        root=".",
+        train=train,
+        transform=transforms.ToTensor(),
+        download=True
+    )
+    # Equivalent to slicing with [::slice]
     sub_dataset = torch.utils.data.Subset(
-      full_dataset, indices=range(0, len(full_dataset), slice))
-    
+        full_dataset, indices=range(0, len(full_dataset), slice))
+
     return sub_dataset
 
 
 def make_loader(dataset, batch_size):
-    loader = torch.utils.data.DataLoader(dataset=dataset,
-                                         batch_size=batch_size, 
-                                         shuffle=True,
-                                         pin_memory=True, num_workers=2)
+    """Create DataLoader for dataset.
+
+    Args:
+        dataset: PyTorch dataset
+        batch_size: Number of samples per batch
+
+    Returns:
+        DataLoader instance
+    """
+    loader = torch.utils.data.DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        pin_memory=True,
+        num_workers=2
+    )
     return loader
 ```
 
-Defining the model is normally the fun part.
+**Note**: This tutorial uses `slice=5` in `get_data()` to load only every 5th example from MNIST, reducing training time for demonstration purposes. In production, use the full dataset by removing the `Subset` wrapper or setting `slice=1`.
 
-But nothing changes with `wandb`,
-so we're gonna stick with a standard ConvNet architecture.
+### Define model architecture
 
-Don't be afraid to mess around with this and try some experiments --
-all your results will be logged on [wandb.ai](https://wandb.ai).
-
-
-
+Create a convolutional neural network for image classification:
 
 ```python
-# Conventional and convolutional neural network
-
 class ConvNet(nn.Module):
+    """Convolutional neural network for MNIST classification."""
+
     def __init__(self, kernels, classes=10):
         super(ConvNet, self).__init__()
-        
+
         self.layer1 = nn.Sequential(
             nn.Conv2d(1, kernels[0], kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.layer2 = nn.Sequential(
-            nn.Conv2d(16, kernels[1], kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(kernels[0], kernels[1], kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.fc = nn.Linear(7 * 7 * kernels[-1], classes)
-        
+
     def forward(self, x):
         out = self.layer1(x)
         out = self.layer2(out)
@@ -272,194 +268,247 @@ class ConvNet(nn.Module):
         return out
 ```
 
-### Define Training Logic
+### Initialize model components
 
-Moving on in our `model_pipeline`, it's time to specify how we `train`.
+Create the model, data loaders, loss function, and optimizer:
 
-Two `wandb` functions come into play here: `watch` and `log`.
+```python
+def make(config):
+    """Initialize model, data, loss, and optimizer.
 
-## Track gradients with `run.watch()` and everything else with `run.log()`
+    Args:
+        config: Configuration object from wandb.config
 
-`run.watch` will log the gradients and the parameters of your model,
-every `log_freq` steps of training.
+    Returns:
+        Tuple of (model, train_loader, test_loader, criterion, optimizer)
+    """
+    # Load data
+    train = get_data(train=True)
+    test = get_data(train=False)
+    train_loader = make_loader(train, batch_size=config.batch_size)
+    test_loader = make_loader(test, batch_size=config.batch_size)
 
-All you need to do is call it before you start training.
+    # Initialize model
+    model = ConvNet(config.kernels, config.classes).to(device)
 
-The rest of the training code remains the same:
-we iterate over epochs and batches,
-running forward and backward passes
-and applying our `optimizer`.
+    # Define loss and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=config.learning_rate)
 
+    return model, train_loader, test_loader, criterion, optimizer
+```
+
+## Track training progress
+
+### Monitor gradients and parameters
+
+Use `wandb.watch()` to automatically log gradients and parameters during training:
+
+```python
+wandb.watch(model, criterion, log="all", log_freq=10)
+```
+
+Parameters:
+- `model`: Your PyTorch model
+- `criterion`: Loss function (optional)
+- `log`: What to track - `"gradients"`, `"parameters"`, `"all"`, or `None`
+- `log_freq`: How often to log, in training batches (e.g., `10` means every 10 batches). Lower values provide more detail but increase logging overhead.
+
+### Log metrics during training
+
+Implement the training loop with metric logging:
 
 ```python
 def train(model, loader, criterion, optimizer, config):
-    # Tell wandb to watch what the model gets up to: gradients, weights, and more.
-    run = wandb.init(project="pytorch-demo", config=config)
-    run.watch(model, criterion, log="all", log_freq=10)
+    """Train the model and log metrics to W&B.
 
-    # Run training and track with wandb
+    Args:
+        model: PyTorch model
+        loader: Training data loader
+        criterion: Loss function
+        optimizer: Optimizer
+        config: Configuration object
+    """
+    # Track gradients and parameters
+    wandb.watch(model, criterion, log="all", log_freq=10)
+
     total_batches = len(loader) * config.epochs
-    example_ct = 0  # number of examples seen
+    example_ct = 0  # Number of examples seen
     batch_ct = 0
+
     for epoch in tqdm(range(config.epochs)):
         for _, (images, labels) in enumerate(loader):
-
             loss = train_batch(images, labels, model, optimizer, criterion)
-            example_ct +=  len(images)
+            example_ct += len(images)
             batch_ct += 1
 
-            # Report metrics every 25th batch
+            # Log loss and epoch metrics every 25 batches
             if ((batch_ct + 1) % 25) == 0:
                 train_log(loss, example_ct, epoch)
 
 
 def train_batch(images, labels, model, optimizer, criterion):
+    """Execute a single training batch.
+
+    Args:
+        images: Batch of input images
+        labels: Corresponding labels
+        model: PyTorch model
+        optimizer: Optimizer
+        criterion: Loss function
+
+    Returns:
+        Loss value for the batch
+    """
     images, labels = images.to(device), labels.to(device)
-    
-    # Forward pass ➡
+
+    # Forward pass
     outputs = model(images)
     loss = criterion(outputs, labels)
-    
-    # Backward pass ⬅
+
+    # Backward pass
     optimizer.zero_grad()
     loss.backward()
 
-    # Step with optimizer
+    # Update weights
     optimizer.step()
 
     return loss
-```
-
-The only difference is in the logging code:
-where previously you might have reported metrics by printing to the terminal,
-now you pass the same information to `run.log()`.
-
-`run.log()` expects a dictionary with strings as keys.
-These strings identify the objects being logged, which make up the values.
-You can also optionally log which `step` of training you're on.
-
-> *Side Note*: I like to use the number of examples the model has seen,
-since this makes for easier comparison across batch sizes,
-but you can use raw steps or batch count. For longer training runs, it can also make sense to log by `epoch`.
 
 
-```python
 def train_log(loss, example_ct, epoch):
-    with wandb.init(project="pytorch-demo") as run:
-        # Log the loss and epoch number
-        # This is where we log the metrics to W&B
-        run.log({"epoch": epoch, "loss": loss}, step=example_ct)
-        print(f"Loss after {str(example_ct).zfill(5)} examples: {loss:.3f}")
+    """Log training metrics to W&B.
+
+    Args:
+        loss: Current loss value
+        example_ct: Number of examples processed
+        epoch: Current epoch number
+    """
+    # Log metrics with example count as x-axis
+    wandb.log({"epoch": epoch, "loss": loss}, step=example_ct)
+    print(f"Loss after {str(example_ct).zfill(5)} examples: {loss:.3f}")
 ```
 
-### Define Testing Logic
+The `wandb.log()` function accepts a dictionary where:
+- Keys are metric names (displayed in the dashboard)
+- Values are the metric values to log
+- The `step` parameter controls the x-axis in charts (here we use total examples seen, which provides a consistent metric across different batch sizes)
 
-Once the model is done training, we want to test it:
-run it against some fresh data from production, perhaps,
-or apply it to some hand-curated examples.
+**Note**: This tutorial logs metrics every 25 batches (via `wandb.log()`) while gradients/parameters are logged every 10 batches (via `wandb.watch()`). These frequencies can be adjusted based on your needs—more frequent logging provides finer detail but increases overhead.
 
+## Evaluate and save models
 
+### Test model performance
 
-## (Optional) Call `run.save()`
-
-This is also a great time to save the model's architecture
-and final parameters to disk.
-For maximum compatibility, we'll `export` our model in the
-[Open Neural Network eXchange (ONNX) format](https://onnx.ai/).
-
-Passing that filename to `run.save()` ensures that the model parameters
-are saved to W&B's servers: no more losing track of which `.h5` or `.pb`
-corresponds to which training runs.
-
-For more advanced `wandb` features for storing, versioning, and distributing
-models, check out our [Artifacts tools](https://www.wandb.com/artifacts).
-
+Evaluate your model on the test set and log results:
 
 ```python
 def test(model, test_loader):
+    """Evaluate model on test set and log results.
+
+    Args:
+        model: Trained PyTorch model
+        test_loader: Test data loader
+    """
     model.eval()
 
-    with wandb.init(project="pytorch-demo") as run:
-        # Run the model on some test examples
-        with torch.no_grad():
-            correct, total = 0, 0
-            for images, labels in test_loader:
-                images, labels = images.to(device), labels.to(device)
-                outputs = model(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+    # Evaluate model
+    with torch.no_grad():
+        correct, total = 0, 0
+        for images, labels in test_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
-            print(f"Accuracy of the model on the {total} " +
-                f"test images: {correct / total:%}")
-            
-            run.log({"test_accuracy": correct / total})
+        print(f"Accuracy of the model on the {total} " +
+              f"test images: {correct / total:%}")
 
-        # Save the model in the exchangeable ONNX format
+        # Log test accuracy
+        wandb.log({"test_accuracy": correct / total})
+
+    # Save model in ONNX format (optional)
+    try:
         torch.onnx.export(model, images, "model.onnx")
-        run.save("model.onnx")
+        wandb.save("model.onnx")
+        print("Model exported to ONNX format successfully")
+    except Exception as e:
+        print(f"ONNX export skipped: {e}")
+        # Save PyTorch checkpoint instead
+        torch.save(model.state_dict(), "model.pth")
+        wandb.save("model.pth")
 ```
 
-### Run training and watch your metrics live on wandb.ai
+### Save model files
 
-Now that we've defined the whole pipeline and slipped in
-those few lines of W&B code,
-we're ready to run our fully tracked experiment.
-
-We'll report a few links to you:
-our documentation,
-the Project page, which organizes all the runs in a project, and
-the Run page, where this run's results will be stored.
-
-Navigate to the Run page and check out these tabs:
-
-1. **Charts**, where the model gradients, parameter values, and loss are logged throughout training
-2. **System**, which contains a variety of system metrics, including Disk I/O utilization, CPU and GPU metrics (watch that temperature soar), and more
-3. **Logs**, which has a copy of anything pushed to standard out during training
-4. **Files**, where, once training is complete, you can click on the `model.onnx` to view our network with the [Netron model viewer](https://github.com/lutzroeder/netron).
-
-Once the run in finished, when the `with wandb.init` block exits,
-we'll also print a summary of the results in the cell output.
-
+Use `wandb.save()` to upload model files to W&B:
 
 ```python
-# Build, train and analyze the model with the pipeline
+# Save PyTorch checkpoint
+torch.save(model.state_dict(), "model.pth")
+wandb.save("model.pth")
+
+# Save in ONNX format for cross-framework compatibility
+torch.onnx.export(model, sample_input, "model.onnx")
+wandb.save("model.onnx")
+```
+
+The `wandb.save()` function ensures model files are:
+- Uploaded to W&B servers
+- Associated with the current run
+- Versioned and retrievable
+
+**ONNX vs PyTorch checkpoints**: ONNX format (.onnx) provides cross-framework compatibility, allowing your model to run in different environments beyond PyTorch. PyTorch checkpoints (.pth) are faster to save and sufficient if you're staying within the PyTorch ecosystem. The example code tries ONNX first, falling back to PyTorch format if ONNX export fails.
+
+For advanced model versioning and distribution, see [W&B Artifacts](/models/artifacts/).
+
+## Run the training pipeline
+
+Execute the complete training pipeline:
+
+```python
+# Train model with specified configuration
 model = model_pipeline(config)
 ```
 
-### Test Hyperparameters with Sweeps
+After you run this code, W&B provides links to:
+- **Project page**: Organizes all runs in your project
+- **Run page**: Contains results for this specific run
 
-We only looked at a single set of hyperparameters in this example.
-But an important part of most ML workflows is iterating over
-a number of hyperparameters.
+The run page includes these tabs:
 
-You can use W&B Sweeps to automate hyperparameter testing and explore the space of possible models and optimization strategies.
+1. **Charts**: Visualizes logged metrics, gradients, and parameters over time
+2. **Overview**: Summary of run configuration, metadata, and hardware information
+3. **Logs**: Shows console output from standard out during training
+4. **Files**: Lists saved files, including `model.onnx` (viewable with the [Netron model viewer](https://github.com/lutzroeder/netron))
+5. **Artifacts**: Tracks versioned datasets and model files (if using W&B Artifacts)
 
-Check out a [Colab notebook demonstrating hyperparameter optimization using W&B Sweeps](https://wandb.me/sweeps-colab).
+## Conclusion
 
-Running a hyperparameter sweep with W&B is very easy. There are just 3 simple steps:
+You've successfully integrated Weights & Biases with PyTorch! You now know how to track experiments, monitor training metrics and gradients, save model checkpoints, and visualize results in the W&B dashboard. These capabilities form the foundation for reproducible, collaborative machine learning workflows.
 
-1. **Define the sweep:** We do this by creating a dictionary or a [YAML file](/models/sweeps/define-sweep-configuration/) that specifies the parameters to search through, the search strategy, the optimization metric et all.
+## Next steps
 
-2. **Initialize the sweep:** 
-`sweep_id = wandb.sweep(sweep_config)`
+Now that you've integrated W&B with PyTorch, explore these additional features:
 
-3. **Run the sweep agent:** 
-`wandb.agent(sweep_id, function=train)`
+- [Environment variables](/platform/hosting/env-vars/): Configure API keys for training on managed clusters
+- [Offline mode](/models/support/run_wandb_offline/): Train without internet access and sync results later
+- [Self-managed deployment](/platform/hosting/hosting-options/self-managed): Install W&B on your own infrastructure
+- [Sweeps](/models/sweeps/): Advanced hyperparameter optimization strategies
+- [Artifacts](/models/artifacts/): Version and track datasets, models, and other files
 
-That's all there is to running a hyperparameter sweep.
+### Optimize hyperparameters with sweeps
+
+W&B Sweeps automates hyperparameter optimization. Instead of manually testing different configurations, you can define a search space and let W&B explore it systematically.
+
+Learn more in the [Sweeps documentation](/models/sweeps/) or check out this [interactive Colab notebook](https://wandb.me/sweeps-colab) for a complete hyperparameter optimization tutorial.
 
 <Frame>
-    <img src="/images/tutorials/pytorch-2.png" alt="PyTorch training dashboard"  />
+    <img src="/images/tutorials/pytorch-2.png" alt="W&B dashboard showing sweep results with parallel coordinates plot and performance metrics"  />
 </Frame>
 
+### Example gallery
 
-## Example Gallery
-
-Explore examples of projects tracked and visualized with W&B in our [Gallery →](https://app.wandb.ai/gallery).
-
-## Advanced Setup
-1. [Environment variables](/platform/hosting/env-vars/): Set API keys in environment variables so you can run training on a managed cluster.
-2. [Offline mode](/models/support/run_wandb_offline/): Use `dryrun` mode to train offline and sync results later.
-3. [On-prem](/platform/hosting/hosting-options/self-managed): Install W&B in a private cloud or air-gapped servers in your own infrastructure. We have local installations for everyone from academics to enterprise teams.
-4. [Sweeps](/models/sweeps/): Set up hyperparameter search quickly with our lightweight tool for tuning.
+Explore projects tracked with W&B in the [Gallery](https://app.wandb.ai/gallery).
