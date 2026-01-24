@@ -5,7 +5,7 @@ import { ColabLink } from '/snippets/en/_includes/colab-link.mdx';
 
 <ColabLink url="https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb" />
 
-This tutorial and its accompanying [W&B + PyTorch notebook](https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb) demonstrate how to integrate [Weights & Biases (W&B)](https://wandb.ai/) with PyTorch to add experiment tracking to your ML model training pipeline.
+This tutorial and its accompanying [W&B + PyTorch notebook](https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb) demonstrate how to add [Weights & Biases (W&B)](https://wandb.ai/) experiment tracking to a PyTorch training pipeline.
 
 In addition to experiment tracking, adding W&B to your PyTorch project enables dataset versioning and project collaboration.
 
@@ -21,32 +21,32 @@ The [W&B + PyTorch notebook](https://colab.research.google.com/github/wandb/exam
     <img src="/images/tutorials/pytorch.png" alt="PyTorch and W&B integration diagram"  />
 </Frame>
 
-The following pseudocode shows the basic W&B integration pattern: import `wandb`, define hyperparameters in a `config` dictionary, and initialize a training run with `wandb.init()`. Inside the run, use `run.watch()` to track gradients, `run.log()` to record metrics, and `run.save()` to store artifacts:
+The following pseudocode shows the basic W&B integration pattern: import `wandb`, define hyperparameters in a `config` dictionary, and initialize a training run with `wandb.init()`. Inside the run, use `wandb.watch()` to track gradients, `wandb.log()` to record metrics, and `wandb.save()` to store artifacts:
 
 ```python
 # import the library
 import wandb
 
 # start a new experiment
-with wandb.init(project="new-sota-model") as run:
- 
-    # capture a dictionary of hyperparameters with config
-    run.config = {"learning_rate": 0.001, "epochs": 100, "batch_size": 128}
+wandb.init(project="new-sota-model")
 
-    # set up model and data
-    model, dataloader = get_model(), get_data()
+# capture a dictionary of hyperparameters with config
+wandb.config = {"learning_rate": 0.001, "epochs": 100, "batch_size": 128}
 
-    # optional: track gradients
-    run.watch(model)
+# set up model and data
+model, dataloader = get_model(), get_data()
 
-    for batch in dataloader:
-        metrics = model.training_step()
-        # log metrics inside your training loop to visualize model performance
-        run.log(metrics)
+# optional: track gradients
+wandb.watch(model)
 
-    # optional: save model at the end
-    model.to_onnx()
-    run.save("model.onnx")
+for batch in dataloader:
+  metrics = model.training_step()
+  # log metrics inside your training loop to visualize model performance
+  wandb.log(metrics)
+
+# optional: save model at the end
+model.to_onnx()
+wandb.save("model.onnx")
 ```
 
 ## Follow along with the W&B + PyTorch notebook
@@ -90,18 +90,18 @@ torchvision.datasets.MNIST.mirrors = [mirror for mirror in torchvision.datasets.
 
 ### Step 1: Install W&B
 
-Install the `wandb` and `onnx` libraries using pip:
+Install `wandb` and the required ONNX packages using pip:
 
 
 ```python
-!pip install wandb onnx -Uq
+!pip install wandb onnx onnxscript -Uq
 ```
 
 **Note:** ONNX is used later to save the model for visualization.
 
 ### Step 2: Import and log in to W&B
 
-Import and log in to W&B. If this is your first time using W&B, you’ll need to [sign up for a free account](https://wandb.ai).
+Import and log in to W&B. If this is your first time using W&B, you’ll be prompted to [sign up for a free account](https://wandb.ai/authorize) or use an existing one.
 
 ```python
 import wandb
@@ -129,26 +129,26 @@ config = dict(
     architecture="CNN")
 ```
 
-Next, wrap your standard training pipeline in `wandb.init()` to log hyperparameters automatically. Use `run.config` throughout your code to make sure the logged values are the ones used in execution:
+Next, wrap your standard training pipeline in `wandb.init()` to log hyperparameters automatically. Use `wandb.config` throughout your code to make sure the logged values are the ones used in execution:
 
 
 ```python
 def model_pipeline(hyperparameters):
 
     # tell wandb to get started
-    with wandb.init(project="pytorch-demo", config=hyperparameters) as run:
-        # access all HPs through run.config, so logging matches execution.
-        config = run.config
+    with wandb.init(project="pytorch-demo", config=hyperparameters):
+      # access all HPs through wandb.config, so logging matches execution!
+      config = wandb.config
 
-        # make the model, data, and optimization problem
-        model, train_loader, test_loader, criterion, optimizer = make(config)
-        print(model)
+      # make the model, data, and optimization problem
+      model, train_loader, test_loader, criterion, optimizer = make(config)
+      print(model)
 
-        # and use them to train the model
-        train(model, train_loader, criterion, optimizer, config)
+      # and use them to train the model
+      train(model, train_loader, criterion, optimizer, config)
 
-        # and test its final performance
-        test(model, test_loader)
+      # and test its final performance
+      test(model, test_loader)
 
     return model
 ```
@@ -233,16 +233,15 @@ class ConvNet(nn.Module):
 
 Next, define the training functions.
 
-### Step 4: Track gradients with `run.watch()` and metrics with `run.log()`
+### Step 4: Track gradients with `wandb.watch()` and metrics with `wandb.log()`
 
-Call `run.watch()` before training to log gradients and model parameters at regular intervals, as specified by `log_freq`. The rest is standard PyTorch training.
+Call `wandb.watch()` before training to log gradients and model parameters at regular intervals, as specified by `log_freq`. The rest is standard PyTorch training.
 
 
 ```python
 def train(model, loader, criterion, optimizer, config):
-    # Tell wandb to watch what the model gets up to: gradients, weights, and more.
-    run = wandb.init(project="pytorch-demo", config=config)
-    run.watch(model, criterion, log="all", log_freq=10)
+    # Tell wandb to watch what the model gets up to: gradients, weights, and more!
+    wandb.watch(model, criterion, log="all", log_freq=10)
 
     # Run training and track with wandb
     total_batches = len(loader) * config.epochs
@@ -277,52 +276,49 @@ def train_batch(images, labels, model, optimizer, criterion):
     return loss
 ```
 
-Use `run.log()` to record metrics. Pass a dictionary with strings as keys and an optional `step` parameter:
+Use `wandb.log()` to record metrics. Pass a dictionary with strings as keys and an optional `step` parameter:
 
 
 ```python
 def train_log(loss, example_ct, epoch):
-    with wandb.init(project="pytorch-demo") as run:
-        # Log the loss and epoch number
-        # This is where we log the metrics to W&B
-        run.log({"epoch": epoch, "loss": loss}, step=example_ct)
-        print(f"Loss after {str(example_ct).zfill(5)} examples: {loss:.3f}")
+    # Where the magic happens
+    wandb.log({"epoch": epoch, "loss": loss}, step=example_ct)
+    print(f"Loss after {str(example_ct).zfill(5)} examples: {loss:.3f}")
 ```
 **Tip:** This example uses the example count for the step, which makes comparison across batch sizes easier. You can also use batch count or epoch.
 
 ## Define testing logic
 
-This section covers standard PyTorch testing, plus `run.save()` to upload the model.
+This section covers standard PyTorch testing, plus `wandb.save()` to upload the model.
 
 
-### (Optional) Step 5: Save the model with `run.save()`
+### (Optional) Step 5: Save the model with `wandb.save()`
 
-After testing, export the model in ONNX format and call `run.save()` to upload it to W&B. This keeps model files tied to their training runs.
+After testing, export the model in ONNX format and call `wandb.save()` to upload it to W&B. This keeps model files tied to their training runs.
 
 
 ```python
 def test(model, test_loader):
     model.eval()
 
-    with wandb.init(project="pytorch-demo") as run:
-        # Run the model on some test examples
-        with torch.no_grad():
-            correct, total = 0, 0
-            for images, labels in test_loader:
-                images, labels = images.to(device), labels.to(device)
-                outputs = model(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+    # Run the model on some test examples
+    with torch.no_grad():
+        correct, total = 0, 0
+        for images, labels in test_loader:
+            images, labels = images.to(device), labels.to(device)
+            outputs = model(images)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
 
-            print(f"Accuracy of the model on the {total} " +
-                f"test images: {correct / total:%}")
-            
-            run.log({"test_accuracy": correct / total})
+        print(f"Accuracy of the model on the {total} " +
+              f"test images: {correct / total:%}")
+        
+        wandb.log({"test_accuracy": correct / total})
 
-        # Save the model in the exchangeable ONNX format
-        torch.onnx.export(model, images, "model.onnx")
-        run.save("model.onnx")
+    # Save the model in the exchangeable ONNX format
+    torch.onnx.export(model, images, "model.onnx")
+    wandb.save("model.onnx")
 ```
 For more advanced features for storing, versioning, and distributing models, see W&B’s [Artifacts tools](https://www.wandb.com/artifacts).
 
@@ -335,15 +331,15 @@ Run the pipeline to start your tracked experiment:
 model = model_pipeline(config)
 ```
 
-W&B outputs links to your project and run pages.
+W&B outputs links to your run and project pages.
 
-- **Project page:** Organizes all runs in your project.
 - **Run page:** Contains results for this specific run.
+- **Project page:** Displays all runs in your project.
 
 On the run page, explore:
 
 - **Charts:** Model gradients, parameter values, and loss over training.
-- **System:** Disk I/O utilization, CPU, and GPU metrics.
+- **Overview:** Run metadata, system hardware, config hyperparameters, and summary metrics (final loss and accuracy).
 - **Logs:** `stdout` from training.
 - **Files:** Select `model.onnx` to view your network in the Netron model viewer.
 
