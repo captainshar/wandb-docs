@@ -88,7 +88,7 @@ torchvision.datasets.MNIST.mirrors = [mirror for mirror in torchvision.datasets.
                                       if not mirror.startswith("http://yann.lecun.com")]
 ```
 
-### Step 0: Install W&B
+### Step 1: Install W&B
 
 Install the `wandb` and `onnx` libraries using pip:
 
@@ -99,7 +99,7 @@ Install the `wandb` and `onnx` libraries using pip:
 
 **Note:** ONNX is used later to save the model for visualization.
 
-### Step 1: Import and log in to W&B
+### Step 2: Import and log in to W&B
 
 Import and log in to W&B. If this is your first time using W&B, you’ll need to [sign up for a free account](https://wandb.ai).
 
@@ -113,7 +113,7 @@ When prompted, paste your API key from [wandb.ai/authorize](https://wandb.ai/aut
 
 ## Define the experiment and pipeline
 
-### Step 2: Track metadata and hyperparameters with `wandb.init()`
+### Step 3: Track metadata and hyperparameters with `wandb.init()`
 
 Define a `config` dictionary with your hyperparameters and metadata. This example shows a few hyperparameters, but you can include any model configuration. The metadata fields (`dataset`, `architecture`) help filter and compare runs in your dashboard.
 
@@ -233,7 +233,7 @@ class ConvNet(nn.Module):
 
 Next, define the training functions.
 
-### Step 3: Track gradients with `run.watch()` and metrics with `run.log()`
+### Step 4: Track gradients with `run.watch()` and metrics with `run.log()`
 
 Call `run.watch()` before training to log gradients and model parameters at regular intervals, as specified by `log_freq`. The rest is standard PyTorch training.
 
@@ -295,7 +295,7 @@ def train_log(loss, example_ct, epoch):
 This section covers standard PyTorch testing, plus `run.save()` to upload the model.
 
 
-### (Optional) Step 4: Save the model with `run.save()`
+### (Optional) Step 5: Save the model with `run.save()`
 
 After testing, export the model in ONNX format and call `run.save()` to upload it to W&B. This keeps model files tied to their training runs.
 
