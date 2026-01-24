@@ -21,32 +21,24 @@ The [W&B + PyTorch notebook](https://colab.research.google.com/github/wandb/exam
     <img src="/images/tutorials/pytorch.png" alt="PyTorch and W&B integration diagram"  />
 </Frame>
 
-The following pseudocode shows the basic W&B integration pattern: import `wandb`, define hyperparameters in a `config` dictionary, and initialize a training run with `wandb.init()`. Inside the run, use `wandb.watch()` to track gradients, `wandb.log()` to record metrics, and `wandb.save()` to store artifacts:
+The following pseudocode shows the basic W&B integration pattern: define hyperparameters in a `config` dictionary and pass it to `wandb.init()`. Inside the run, access hyperparameters through `wandb.config`, use `wandb.watch()` to track gradients, `wandb.log()` to record metrics, and `wandb.save()` to store artifacts:
 
 ```python
-# import the library
 import wandb
 
-# start a new experiment
-wandb.init(project="new-sota-model")
+config = {"learning_rate": 0.001, "epochs": 100, "batch_size": 128}
 
-# capture a dictionary of hyperparameters with config
-wandb.config = {"learning_rate": 0.001, "epochs": 100, "batch_size": 128}
+with wandb.init(project="new-sota-model", config=config):
+    config = wandb.config  # use wandb.config for consistent logging
+    model, dataloader = get_model(), get_data()
 
-# set up model and data
-model, dataloader = get_model(), get_data()
+    wandb.watch(model)  # optional: track gradients
 
-# optional: track gradients
-wandb.watch(model)
+    for batch in dataloader:
+        metrics = model.training_step()
+        wandb.log(metrics)
 
-for batch in dataloader:
-  metrics = model.training_step()
-  # log metrics inside your training loop to visualize model performance
-  wandb.log(metrics)
-
-# optional: save model at the end
-model.to_onnx()
-wandb.save("model.onnx")
+    wandb.save("model.onnx")  # optional: save model
 ```
 
 ## Follow along with the W&B + PyTorch notebook
@@ -101,7 +93,7 @@ torchvision.datasets.MNIST.mirrors = [mirror for mirror in torchvision.datasets.
 
 ### Step 2: Import and log in to W&B
 
-Import and log in to W&B. If this is your first time using W&B, you’ll be prompted to [sign up for a free account](https://wandb.ai/authorize) or use an existing one.
+Import and log in to W&B. If this is your first time using W&B, you'll be prompted to [sign up for a free account](https://wandb.ai/authorize) or use an existing one.
 
 ```python
 import wandb
@@ -170,11 +162,11 @@ def make(config):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(
         model.parameters(), lr=config.learning_rate)
-    
+
     return model, train_loader, test_loader, criterion, optimizer
 ```
 
-**Note:** W&B code runs in separate processes, so logging issues won’t crash your training run. If the initial logging didn’t work, you can log the data later with `wandb sync`.
+**Note:** W&B code runs in separate processes, so logging issues won't crash your training run. If the initial logging didn't work, you can log the data later with `wandb sync`.
 
 ### Define the data loading and model
 
@@ -184,19 +176,19 @@ The following is standard PyTorch data loading with no W&B-specific code:
 ```python
 def get_data(slice=5, train=True):
     full_dataset = torchvision.datasets.MNIST(root=".",
-                                              train=train, 
+                                              train=train,
                                               transform=transforms.ToTensor(),
                                               download=True)
-    #  equiv to slicing with [::slice] 
+    #  equiv to slicing with [::slice]
     sub_dataset = torch.utils.data.Subset(
       full_dataset, indices=range(0, len(full_dataset), slice))
-    
+
     return sub_dataset
 
 
 def make_loader(dataset, batch_size):
     loader = torch.utils.data.DataLoader(dataset=dataset,
-                                         batch_size=batch_size, 
+                                         batch_size=batch_size,
                                          shuffle=True,
                                          pin_memory=True, num_workers=2)
     return loader
@@ -211,7 +203,7 @@ Similarly, the model definition is standard PyTorch. You can experiment with the
 class ConvNet(nn.Module):
     def __init__(self, kernels, classes=10):
         super(ConvNet, self).__init__()
-        
+
         self.layer1 = nn.Sequential(
             nn.Conv2d(1, kernels[0], kernel_size=5, stride=1, padding=2),
             nn.ReLU(),
@@ -221,7 +213,7 @@ class ConvNet(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
         self.fc = nn.Linear(7 * 7 * kernels[-1], classes)
-        
+
     def forward(self, x):
         out = self.layer1(x)
         out = self.layer2(out)
@@ -262,11 +254,11 @@ def train(model, loader, criterion, optimizer, config):
 
 def train_batch(images, labels, model, optimizer, criterion):
     images, labels = images.to(device), labels.to(device)
-    
+
     # Forward pass ➡
     outputs = model(images)
     loss = criterion(outputs, labels)
-    
+
     # Backward pass ⬅
     optimizer.zero_grad()
     loss.backward()
@@ -315,7 +307,7 @@ def test(model, test_loader):
 
         print(f"Accuracy of the model on the {total} " +
               f"test images: {correct / total:%}")
-        
+
         wandb.log({"test_accuracy": correct / total})
 
     # Save the model in the exchangeable ONNX format
@@ -323,7 +315,7 @@ def test(model, test_loader):
     wandb.save("model.onnx")
 ```
 
-For more advanced features for storing, versioning, and distributing models, see W&B’s [Artifacts tools](https://www.wandb.com/artifacts).
+For more advanced features for storing, versioning, and distributing models, see W&B's [Artifacts tools](https://www.wandb.com/artifacts).
 
 ## Run training and watch metrics live
 
