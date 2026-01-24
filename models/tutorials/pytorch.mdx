@@ -29,16 +29,20 @@ import wandb
 config = {"learning_rate": 0.001, "epochs": 100, "batch_size": 128}
 
 with wandb.init(project="new-sota-model", config=config):
-    config = wandb.config  # use wandb.config for consistent logging
+    # Use wandb.config for consistent logging
+    config = wandb.config
     model, dataloader = get_model(), get_data()
 
-    wandb.watch(model)  # optional: track gradients
+    # Track gradients (optional)
+    wandb.watch(model)
 
     for batch in dataloader:
         metrics = model.training_step()
+        # Log metrics to W&B
         wandb.log(metrics)
 
-    wandb.save("model.onnx")  # optional: save model
+    # Save model to W&B (optional)
+    wandb.save("model.onnx")
 ```
 
 ## Follow along with the W&B + PyTorch notebook
@@ -127,19 +131,18 @@ Next, wrap your standard training pipeline in `wandb.init()` to log hyperparamet
 ```python
 def model_pipeline(hyperparameters):
 
-    # tell wandb to get started
     with wandb.init(project="pytorch-demo", config=hyperparameters):
-      # access all HPs through wandb.config, so logging matches execution!
+      # Access all HPs through wandb.config, so logging matches execution
       config = wandb.config
 
-      # make the model, data, and optimization problem
+      # Make the model, data, and optimization problem
       model, train_loader, test_loader, criterion, optimizer = make(config)
       print(model)
 
-      # and use them to train the model
+      # Train the model
       train(model, train_loader, criterion, optimizer, config)
 
-      # and test its final performance
+      # Test its final performance
       test(model, test_loader)
 
     return model
@@ -198,8 +201,6 @@ Similarly, the model definition is standard PyTorch. You can experiment with the
 
 
 ```python
-# Conventional and convolutional neural network
-
 class ConvNet(nn.Module):
     def __init__(self, kernels, classes=10):
         super(ConvNet, self).__init__()
@@ -233,12 +234,12 @@ Call `wandb.watch()` before training to log gradients and model parameters at re
 
 ```python
 def train(model, loader, criterion, optimizer, config):
-    # Tell wandb to watch what the model gets up to: gradients, weights, and more!
+    # Track gradients and weights
     wandb.watch(model, criterion, log="all", log_freq=10)
 
     # Run training and track with wandb
     total_batches = len(loader) * config.epochs
-    example_ct = 0  # number of examples seen
+    example_ct = 0  # Number of examples seen
     batch_ct = 0
     for epoch in tqdm(range(config.epochs)):
         for _, (images, labels) in enumerate(loader):
@@ -274,7 +275,7 @@ Use `wandb.log()` to record metrics. Pass a dictionary with strings as keys and 
 
 ```python
 def train_log(loss, example_ct, epoch):
-    # Where the magic happens
+    # Log metrics to W&B
     wandb.log({"epoch": epoch, "loss": loss}, step=example_ct)
     print(f"Loss after {str(example_ct).zfill(5)} examples: {loss:.3f}")
 ```
@@ -295,7 +296,6 @@ After testing, export the model in ONNX format and call `wandb.save()` to upload
 def test(model, test_loader):
     model.eval()
 
-    # Run the model on some test examples
     with torch.no_grad():
         correct, total = 0, 0
         for images, labels in test_loader:
@@ -308,9 +308,10 @@ def test(model, test_loader):
         print(f"Accuracy of the model on the {total} " +
               f"test images: {correct / total:%}")
 
+        # Log test accuracy to W&B
         wandb.log({"test_accuracy": correct / total})
 
-    # Save the model in the exchangeable ONNX format
+    # Save model to W&B
     torch.onnx.export(model, images, "model.onnx")
     wandb.save("model.onnx")
 ```
