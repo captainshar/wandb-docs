@@ -10,7 +10,7 @@ This tutorial and its accompanying [W&B + PyTorch notebook](https://colab.resear
 In addition to experiment tracking, adding W&B to your PyTorch project enables dataset versioning and project collaboration.
 
 <Frame>
-    <img src="/images/tutorials/huggingface-why.png" alt="Benefits of using W&B"  />
+    <img src="/images/tutorials/huggingface-why.png" alt="W&B platform features: Experiments, Reports, Artifacts, Tables, Sweeps, Launch, and Models"  />
 </Frame>
 
 ## W&B + PyTorch integration overview
@@ -18,7 +18,7 @@ In addition to experiment tracking, adding W&B to your PyTorch project enables d
 The [W&B + PyTorch notebook](https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb) demonstrates how to add W&B experiment tracking to a PyTorch training pipeline. It walks through a simple MNIST classifier, demonstrating how to log hyperparameters, track model gradients, and visualize training metrics in an interactive W&B dashboard.
 
 <Frame>
-    <img src="/images/tutorials/pytorch.png" alt="PyTorch and W&B integration diagram"  />
+    <img src="/images/tutorials/pytorch.png" alt="W&B Charts tab showing loss and gradient metrics during training"  />
 </Frame>
 
 The following pseudocode shows the basic W&B integration pattern: define hyperparameters in a `config` dictionary and pass it to `wandb.init()`. Inside the run, access hyperparameters through `wandb.config`, use `wandb.watch()` to track gradients, `wandb.log()` to record metrics, and `wandb.save()` to store artifacts:
