@@ -58,6 +58,17 @@ When you run the [example notebook](https://colab.research.google.com/github/wan
 
 ## Install, import, and log in
 
+### Step 1: Install W&B
+
+Install `wandb` and the required ONNX packages using pip:
+
+
+```python
+!pip install wandb onnx onnxscript -Uq
+```
+
+**Note:** ONNX is used later to save the model for visualization.
+
 ### Import and configure PyTorch prerequisites
 
 The following code imports the required libraries and configures the PyTorch training environment for reproducibility:
@@ -87,17 +98,6 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 torchvision.datasets.MNIST.mirrors = [mirror for mirror in torchvision.datasets.MNIST.mirrors
                                       if not mirror.startswith("http://yann.lecun.com")]
 ```
-
-### Step 1: Install W&B
-
-Install `wandb` and the required ONNX packages using pip:
-
-
-```python
-!pip install wandb onnx onnxscript -Uq
-```
-
-**Note:** ONNX is used later to save the model for visualization.
 
 ### Step 2: Import and log in to W&B
 
