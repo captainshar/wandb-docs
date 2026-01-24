@@ -45,7 +45,7 @@ with wandb.init(project="new-sota-model", config=config):
     wandb.save("model.onnx")
 ```
 
-## Follow along with the W&B + PyTorch notebook
+## Follow along with the W&B + PyTorch notebook and video tutorial
 
 When you run the [example notebook](https://colab.research.google.com/github/wandb/examples/blob/master/colabs/pytorch/Simple_PyTorch_Integration.ipynb), you can follow along with this tutorial or with the [video tutorial](https://wandb.me/pytorch-video).
 
@@ -54,7 +54,7 @@ When you run the [example notebook](https://colab.research.google.com/github/wan
 
 ## Install, import, and log in
 
-### Step 1: Install W&B
+### Step 1: Install W&B and PyTorch prerequisites
 
 Install `wandb` and the required ONNX packages using pip:
 
@@ -64,8 +64,6 @@ Install `wandb` and the required ONNX packages using pip:
 ```
 
 **Note:** The notebook uses ONNX to save the model for visualization.
-
-### Import and configure PyTorch prerequisites
 
 The following code imports the required libraries and configures the PyTorch training environment for reproducibility:
 
@@ -171,7 +169,7 @@ def make(config):
 
 **Note:** W&B code runs in separate processes, so logging issues won't crash your training run. If the initial logging didn't work, you can log the data later with `wandb sync`.
 
-### Define the data loading and model
+## Define the data loading and model
 
 The following is standard PyTorch data loading with no W&B-specific code:
 
@@ -337,7 +335,7 @@ On the run page, explore:
 - **Charts:** Model gradients, parameter values, and loss over training.
 - **Overview:** Run metadata, system hardware, config hyperparameters, and summary metrics (final loss and accuracy).
 - **Logs:** `stdout` from training.
-- **Files:** Select `model.onnx` to view your network in the Netron model viewer.
+- **Files:** Select `model.onnx` to view your network in the [Netron model viewer](https://github.com/lutzroeder/netron).
 
 When training completes, W&B prints a summary in the notebook cell output.
 
