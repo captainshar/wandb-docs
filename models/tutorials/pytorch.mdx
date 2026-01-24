@@ -67,7 +67,7 @@ Install `wandb` and the required ONNX packages using pip:
 !pip install wandb onnx onnxscript -Uq
 ```
 
-**Note:** ONNX is used later to save the model for visualization.
+**Note:** The notebook uses ONNX to save the model for visualization.
 
 ### Import and configure PyTorch prerequisites
 
@@ -201,7 +201,7 @@ def make_loader(dataset, batch_size):
     return loader
 ```
 
-Similarly, the model definition is standard PyTorch. Feel free to experiment with the architecture, and W&B will track all your results:
+Similarly, the model definition is standard PyTorch. You can experiment with the architecture, and W&B will track all your results:
 
 
 ```python
