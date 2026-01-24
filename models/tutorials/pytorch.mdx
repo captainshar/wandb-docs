@@ -173,6 +173,7 @@ def make(config):
     
     return model, train_loader, test_loader, criterion, optimizer
 ```
+
 **Note:** W&B code runs in separate processes, so logging issues won’t crash your training run. If the initial logging didn’t work, you can log the data later with `wandb sync`.
 
 ### Define the data loading and model
@@ -285,6 +286,7 @@ def train_log(loss, example_ct, epoch):
     wandb.log({"epoch": epoch, "loss": loss}, step=example_ct)
     print(f"Loss after {str(example_ct).zfill(5)} examples: {loss:.3f}")
 ```
+
 **Tip:** This example uses the example count for the step, which makes comparison across batch sizes easier. You can also use batch count or epoch.
 
 ## Define testing logic
@@ -320,6 +322,7 @@ def test(model, test_loader):
     torch.onnx.export(model, images, "model.onnx")
     wandb.save("model.onnx")
 ```
+
 For more advanced features for storing, versioning, and distributing models, see W&B’s [Artifacts tools](https://www.wandb.com/artifacts).
 
 ## Run training and watch metrics live
