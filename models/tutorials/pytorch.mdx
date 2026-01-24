@@ -182,7 +182,7 @@ def get_data(slice=5, train=True):
                                               train=train,
                                               transform=transforms.ToTensor(),
                                               download=True)
-    #  equiv to slicing with [::slice]
+    # equiv to slicing with [::slice]
     sub_dataset = torch.utils.data.Subset(
       full_dataset, indices=range(0, len(full_dataset), slice))
 
@@ -245,7 +245,7 @@ def train(model, loader, criterion, optimizer, config):
         for _, (images, labels) in enumerate(loader):
 
             loss = train_batch(images, labels, model, optimizer, criterion)
-            example_ct +=  len(images)
+            example_ct += len(images)
             batch_ct += 1
 
             # Report metrics every 25th batch
